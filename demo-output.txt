@@ -1,0 +1,92 @@
+--- step1_attention
+scores, one row per token (6 x 6)
+[[-0.23 -0.32  1.75  1.51  2.33  1.55]
+ [ 0.02 -1.15  0.9   0.72 -0.23 -0.05]
+ [ 0.19  0.14  0.29  0.   -0.3   0.17]
+ [ 0.44  0.66 -0.96 -0.91 -1.56 -0.79]
+ [ 0.38  1.22 -0.67 -0.78 -0.67 -0.07]
+ [ 0.52  0.82  0.35  0.88  1.12  0.51]]
+shares, every row adds up to 1
+[[0.03 0.03 0.22 0.17 0.38 0.18]
+ [0.13 0.04 0.32 0.27 0.1  0.13]
+ [0.18 0.17 0.2  0.15 0.11 0.18]
+ [0.31 0.39 0.08 0.08 0.04 0.09]
+ [0.2  0.47 0.07 0.06 0.07 0.13]
+ [0.13 0.18 0.11 0.19 0.24 0.13]]
+row sums [1. 1. 1. 1. 1. 1.]
+answer, one row per token (6 x 4)
+[[-0.26  0.27  0.67  0.32]
+ [-0.22 -0.15  0.37  0.06]
+ [ 0.01 -0.03  0.43 -0.18]
+ [ 0.2  -0.15  0.23 -0.52]
+ [ 0.27  0.03  0.23 -0.56]
+ [-0.08  0.07  0.43 -0.05]]
+--- step2_table
+ tokens   one table   measured peak   seconds
+   1024      4.0 MB         12.0 MB     0.003
+   2048     16.0 MB         48.0 MB     0.023
+   4096     64.0 MB        192.0 MB     0.155
+   8192    256.0 MB         0.75 GB     0.530
+  16384     1.00 GB         3.00 GB     4.001
+the textbook version holds 3.0 tables at its peak
+  32768     4.00 GB   (one table; this laptop has 16.00 GB)
+  65536    16.00 GB   (one table; this laptop has 16.00 GB)
+ 131072    64.00 GB   (one table; this laptop has 16.00 GB)
+--- step3_rows
+16384 tokens
+textbook             peak  3.00 GB   2.53 s
+one table, in place  peak  1.00 GB   1.35 s
+64 rows at a time    peak   8.0 MB   2.35 s
+biggest difference between the answers: 0.0e+00
+one slice of scores 4.0 MB, all keys 4.0 MB, all values 4.0 MB
+--- step4_broken
+scores            [2. 1. 0. 1. 3. 1. 2. 0.]
+shares, whole row [0.16 0.06 0.02 0.06 0.45 0.06 0.16 0.02] sum 1.0
+shares, per tile  [0.53 0.2  0.07 0.2  0.64 0.09 0.24 0.03] sum 2.0
+4096 tokens in 8 tiles per row: biggest difference to the right answer 0.93
+--- step5_running
+whole row at once   4.4875
+   tile powers [7.39 2.72 1.   2.72]  total 13.83  mix 62.74
+   tile powers [20.09  2.72  7.39  1.  ]  total 45.02  mix 202.02
+running total       4.4875
+e to the 88 = 1.65e+38, e to the 89 = inf
+scores times 50, running total: nan
+   top 2  shrink 0.00  tile powers [1.   0.37 0.14 0.37]  total 1.87  mix 8.49
+   top 3  shrink 0.37  tile powers [1.   0.14 0.37 0.05]  total 2.24  mix 10.06
+running top         4.4875
+scores times 50, running top: 5.0000 (whole row at once: 5.0000)
+--- step6_tiled
+16384 tokens, tiles of 512 x 512
+textbook             peak  3.00 GB   2.97 s
+one table, in place  peak  1.00 GB   1.44 s
+tiled                peak   6.3 MB   2.18 s
+biggest difference between the answers: 4.0e-07
+a typical number in the answer: 0.011
+   tile    64 x 64       0.0 MB   2.62 s
+   tile   128 x 128      0.1 MB   1.73 s
+   tile   256 x 256      0.2 MB   1.78 s
+   tile   512 x 512      1.0 MB   1.07 s
+   tile  1024 x 1024     4.0 MB   0.97 s
+   tile  2048 x 2048    16.0 MB   1.54 s
+   tile  4096 x 4096    64.0 MB   1.76 s
+131072 tokens: one table would be 64.00 GB
+tiled: peak 2.3 MB besides the answer
+256 rows checked the slow way, biggest difference 2.3e-07
+--- step7_traffic
+16384 tokens, 64 numbers per token, tiles of 128 x 128
+one tile of scores: 64 KB. Fast memory: 192 KB. One table: 1.00 GB.
+table version moves 1,077,936,128 numbers (4.02 GB)
+tiled version moves   270,532,608 numbers (1.01 GB)
+4.0 times less traffic
+   scores  0.071 s    5 %
+   power   0.863 s   65 %
+   mix     0.055 s    4 %
+   rest    0.348 s   26 %
+--- tests
+ok test_big_scores_do_not_explode
+ok test_exact_with_sixteen_digit_numbers
+ok test_four_versions_agree
+ok test_look_back_only
+ok test_shares_add_up_to_one
+ok test_traffic_count
+6 tests passed
